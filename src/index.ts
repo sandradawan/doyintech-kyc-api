@@ -10,6 +10,7 @@ import { errorHandler } from "./middleware/error";
 import kycRoutes from "./routes/kyc";
 import healthRoutes from "./routes/health";
 import keysRoutes from "./routes/keys";
+import paymentRoutes from "./routes/payment";
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 app.use("/health", healthRoutes);
 app.use("/v1/keys", keysRoutes);
+app.use("/v1/payment", paymentRoutes);
 app.use("/v1/kyc", authMiddleware, kycRoutes);
 
 app.get("/", (_req, res) => {
