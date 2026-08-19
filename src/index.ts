@@ -6,11 +6,13 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { authMiddleware } from "./middleware/auth";
+import { analyticsMiddleware } from "./middleware/analytics";
 import { errorHandler } from "./middleware/error";
 import kycRoutes from "./routes/kyc";
 import healthRoutes from "./routes/health";
 import keysRoutes from "./routes/keys";
 import paymentRoutes from "./routes/payment";
+import analyticsRoutes from "./routes/analytics";
 
 dotenv.config();
 
@@ -36,7 +38,8 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.use("/health", healthRoutes);
 app.use("/v1/keys", keysRoutes);
 app.use("/v1/payment", paymentRoutes);
-app.use("/v1/kyc", authMiddleware, kycRoutes);
+app.use("/v1/analytics", analyticsRoutes);
+app.use("/v1/kyc", authMiddleware, analyticsMiddleware, kycRoutes);
 
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
