@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from "express";
+import { validateAndTrack } from "../services/keys";
 
 export interface AuthRequest extends Request {
   apiKey?: string;
+  keyRecord?: any;
 }
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
@@ -14,15 +16,17 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     });
   }
 
-  const validKeys = (process.env.API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
+  const result = validateAndTrack(apiKey);
 
-  if (!validKeys.includes(apiKey)) {
-    return res.status(403).json({
+  if (!result.ok) {
+    const status = result.error?.includes("quota") ? 429 : 403;
+    return res.status(status).json({
       success: false,
-      error: "Invalid API key",
+      error: result.error,
     });
   }
 
   req.apiKey = apiKey;
+  req.keyRecord = result.record;
   next();
 }
