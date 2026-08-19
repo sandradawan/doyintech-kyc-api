@@ -4,6 +4,9 @@ import { authMiddleware, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
+const CALLBACK_URL = process.env.PAYMENT_CALLBACK_URL || "";
+
 router.post("/initialize", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { plan, email } = req.body;
@@ -19,22 +22,61 @@ router.post("/initialize", authMiddleware, async (req: AuthRequest, res) => {
       return res.status(400).json({ success: false, error: "email is required" });
     }
 
+    if (!PAYSTACK_SECRET) {
+      return res.status(500).json({
+        success: false,
+        error: "PAYSTACK_SECRET_KEY is not configured on the server",
+      });
+    }
+
     const amount = plans[plan as keyof typeof plans].price * 100;
-    const reference = `dt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const payload: any = {
+      email,
+      amount,
+      currency: "NGN",
+      metadata: {
+        apiKey: req.apiKey,
+        plan,
+        service: "doyintech-kyc",
+      },
+    };
+
+    if (CALLBACK_URL) {
+      payload.callback_url = CALLBACK_URL;
+    }
+
+    const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const paystackData = await paystackRes.json();
+
+    if (!paystackData.status) {
+      return res.status(400).json({
+        success: false,
+        error: paystackData.message || "Failed to initialize Paystack transaction",
+      });
+    }
 
     res.json({
       success: true,
       data: {
-        authorization_url: `https://checkout.paystack.com/mock/${reference}`,
-        access_code: reference,
-        reference,
+        authorization_url: paystackData.data.authorization_url,
+        access_code: paystackData.data.access_code,
+        reference: paystackData.data.reference,
         amount,
         plan,
-        message: "In production this returns a real Paystack authorization_url",
       },
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error("[Paystack Initialize]", err);
+    res.status(500).json({ success: false, error: err.message || "Payment initialization failed" });
   }
 });
 
@@ -42,33 +84,72 @@ router.post("/verify", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { reference, plan } = req.body;
 
-    if (!reference || !plan) {
+    if (!reference) {
       return res.status(400).json({
         success: false,
-        error: "reference and plan are required",
+        error: "reference is required",
       });
     }
+
+    if (!PAYSTACK_SECRET) {
+      return res.status(500).json({
+        success: false,
+        error: "PAYSTACK_SECRET_KEY is not configured on the server",
+      });
+    }
+
+    const verifyRes = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        },
+      }
+    );
+
+    const verifyData = await verifyRes.json();
+
+    if (!verifyData.status) {
+      return res.status(400).json({
+        success: false,
+        error: verifyData.message || "Verification failed",
+      });
+    }
+
+    const transaction = verifyData.data;
+
+    if (transaction.status !== "success") {
+      return res.status(400).json({
+        success: false,
+        error: `Payment not successful. Status: ${transaction.status}`,
+      });
+    }
+
+    const upgradedPlan = plan || transaction.metadata?.plan || "growth";
 
     const info = getKeyInfo(req.apiKey!);
     if (!info) {
       return res.status(404).json({ success: false, error: "Key not found" });
     }
 
-    info.plan = plan;
-    info.monthlyLimit = plans[plan as keyof typeof plans]?.limit || info.monthlyLimit;
+    info.plan = upgradedPlan;
+    info.monthlyLimit = plans[upgradedPlan as keyof typeof plans]?.limit || info.monthlyLimit;
     info.usedThisMonth = 0;
 
     res.json({
       success: true,
       data: {
-        message: "Plan upgraded successfully",
+        message: "Payment verified and plan upgraded",
         plan: info.plan,
         monthlyLimit: info.monthlyLimit,
-        reference,
+        reference: transaction.reference,
+        amount: transaction.amount,
+        paidAt: transaction.paid_at,
       },
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error("[Paystack Verify]", err);
+    res.status(500).json({ success: false, error: err.message || "Verification failed" });
   }
 });
 
