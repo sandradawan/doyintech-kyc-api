@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DoyinTech KYC API</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0a0a1a;--card:#12122a;--border:#1e1e3a;--amber:#f59e0b;--text:#e2e8f0;--muted:#94a3b8}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+    .container{max-width:960px;margin:0 auto;padding:2rem 1.25rem}
+    header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0;border-bottom:1px solid var(--border);margin-bottom:2.5rem}
+    .logo{display:flex;align-items:center;gap:.75rem;font-weight:700;font-size:1.25rem}
+    .logo-icon{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#f97316);display:flex;align-items:center;justify-content:center;font-weight:800;color:#0a0a1a}
+    .badge{background:rgba(245,158,11,.15);color:#fbbf24;font-size:.75rem;padding:.25rem .75rem;border-radius:999px;font-weight:500}
+    h1{font-size:2rem;font-weight:700;margin-bottom:.5rem}
+    .subtitle{color:var(--muted);margin-bottom:2rem}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:2rem}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;transition:border-color .2s}
+    .card:hover{border-color:#f59e0b}
+    .card h3{font-size:1.05rem;margin-bottom:.5rem}
+    .card p{color:var(--muted);font-size:.9rem;margin-bottom:1rem}
+    .endpoint{font-family:ui-monospace,monospace;font-size:.8rem;background:#0f0f23;padding:.5rem .75rem;border-radius:8px;color:#fbbf24;word-break:break-all}
+    .section{margin-top:2.5rem}
+    .section h2{font-size:1.25rem;margin-bottom:1rem}
+    label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:.4rem}
+    input,select,textarea{width:100%;background:#0f0f23;border:1px solid var(--border);border-radius:10px;padding:.7rem 1rem;color:var(--text);font-family:inherit;font-size:.95rem;margin-bottom:1rem}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber)}
+    button{background:linear-gradient(135deg,#f59e0b,#d97706);color:#0a0a1a;border:none;border-radius:10px;padding:.75rem 1.5rem;font-weight:600;cursor:pointer;font-size:.95rem}
+    button:hover{opacity:.9}button:disabled{opacity:.5;cursor:not-allowed}
+    #result{background:#0f0f23;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.25rem;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.85rem;max-height:400px;overflow:auto;display:none}
+    .footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);color:var(--muted);font-size:.85rem;text-align:center}
+    .footer a{color:#fbbf24;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo"><div class="logo-icon">D</div><span>DoyinTech</span></div>
+      <span class="badge">KYC API</span>
+    </header>
+    <h1>KYC & Identity API</h1>
+    <p class="subtitle">Verify BVN, NIN, documents and faces for Nigerian fintech, proptech and marketplaces.</p>
+    <div class="grid">
+      <div class="card"><h3>BVN Verification</h3><p>Validate Bank Verification Number and retrieve basic profile data.</p><div class="endpoint">POST /v1/kyc/bvn</div></div>
+      <div class="card"><h3>NIN Verification</h3><p>Verify National Identification Number instantly.</p><div class="endpoint">POST /v1/kyc/nin</div></div>
+      <div class="card"><h3>Document Verification</h3><p>Extract data from passport, driver’s license, voter’s card & more.</p><div class="endpoint">POST /v1/kyc/document</div></div>
+      <div class="card"><h3>Face Match</h3><p>Compare two face images and get confidence score.</p><div class="endpoint">POST /v1/kyc/face-match</div></div>
+    </div>
+    <div class="section">
+      <h2>Live Tester</h2>
+      <label>API Key</label>
+      <input type="text" id="apiKey" value="dev-key-123" />
+      <label>Endpoint</label>
+      <select id="endpoint">
+        <option value="bvn">BVN Verification</option>
+        <option value="nin">NIN Verification</option>
+        <option value="document">Document Verification</option>
+        <option value="face-match">Face Match</option>
+      </select>
+      <label>Request Body (JSON)</label>
+      <textarea id="body" rows="6">{
+  "bvn": "12345678901",
+  "firstName": "Adebayo",
+  "lastName": "Okafor"
+}</textarea>
+      <button onclick="runTest()" id="btn">Run Request</button>
+      <div id="result"></div>
+    </div>
+    <div class="footer">Built by <a href="https://doyintech.vercel.app" target="_blank">DoyinTech</a> · <a href="/health">Health Check</a></div>
+  </div>
+  <script>
+    const samples = {
+      "bvn": `{\n  "bvn": "12345678901",\n  "firstName": "Adebayo",\n  "lastName": "Okafor"\n}`,
+      "nin": `{\n  "nin": "12345678901",\n  "firstName": "Chioma",\n  "lastName": "Nwosu"\n}`,
+      "document": `{\n  "documentType": "passport",\n  "documentImage": "base64-image-string-here...",\n  "selfieImage": "optional-base64-selfie..."\n}`,
+      "face-match": `{\n  "image1": "base64-image-1...",\n  "image2": "base64-image-2..."\n}`
+    };
+    document.getElementById("endpoint").addEventListener("change", e => {
+      document.getElementById("body").value = samples[e.target.value] || "{}";
+    });
+    async function runTest() {
+      const btn = document.getElementById("btn");
+      const result = document.getElementById("result");
+      const key = document.getElementById("apiKey").value.trim();
+      const endpoint = document.getElementById("endpoint").value;
+      let body;
+      try { body = JSON.parse(document.getElementById("body").value); } catch { result.style.display="block"; result.textContent="Invalid JSON"; return; }
+      btn.disabled = true; btn.textContent = "Running..."; result.style.display = "block"; result.textContent = "Loading...";
+      try {
+        const res = await fetch("/v1/kyc/" + endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-API-Key": key },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        result.textContent = JSON.stringify(data, null, 2);
+      } catch (err) { result.textContent = "Error: " + err.message; }
+      finally { btn.disabled = false; btn.textContent = "Run Request"; }
+    }
+  </script>
+</body>
+</html>
