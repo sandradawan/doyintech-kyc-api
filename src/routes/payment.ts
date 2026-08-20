@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { plans, getKeyInfo } from "../services/keys";
+import { addPayment, listPayments } from "../services/billing";
 import { authMiddleware, AuthRequest } from "../middleware/auth";
 
 const router = Router();
@@ -136,6 +137,16 @@ router.post("/verify", authMiddleware, async (req: AuthRequest, res) => {
     info.monthlyLimit = plans[upgradedPlan as keyof typeof plans]?.limit || info.monthlyLimit;
     info.usedThisMonth = 0;
 
+    addPayment({
+      reference: transaction.reference,
+      plan: upgradedPlan,
+      amount: transaction.amount,
+      email: transaction.customer?.email || "",
+      apiKey: req.apiKey!,
+      status: "success",
+      paidAt: transaction.paid_at || new Date().toISOString(),
+    });
+
     res.json({
       success: true,
       data: {
@@ -163,6 +174,10 @@ router.get("/plans", (_req, res) => {
       priceFormatted: p.price === 0 ? "Custom" : `₦${p.price.toLocaleString()}`,
     })),
   });
+});
+
+router.get("/history", authMiddleware, (req: AuthRequest, res) => {
+  res.json({ success: true, data: listPayments(req.apiKey) });
 });
 
 export default router;
