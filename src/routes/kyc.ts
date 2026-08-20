@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { verifyBVN, verifyNIN, verifyDocument, faceMatch } from "../services/verification";
+import { verifyBVN, verifyNIN, verifyDocument, faceMatch, getProviderInfo } from "../services/verification";
+import { AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
@@ -27,40 +28,44 @@ const faceMatchSchema = z.object({
   image2: z.string().min(100),
 });
 
-router.post("/bvn", async (req, res, next) => {
+router.get("/provider", (_req, res) => {
+  res.json({ success: true, data: getProviderInfo() });
+});
+
+router.post("/bvn", async (req: AuthRequest, res, next) => {
   try {
     const body = bvnSchema.parse(req.body);
-    const result = await verifyBVN(body);
+    const result = await verifyBVN(body, req.apiKey);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/nin", async (req, res, next) => {
+router.post("/nin", async (req: AuthRequest, res, next) => {
   try {
     const body = ninSchema.parse(req.body);
-    const result = await verifyNIN(body);
+    const result = await verifyNIN(body, req.apiKey);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/document", async (req, res, next) => {
+router.post("/document", async (req: AuthRequest, res, next) => {
   try {
     const body = documentSchema.parse(req.body);
-    const result = await verifyDocument(body);
+    const result = await verifyDocument(body, req.apiKey);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/face-match", async (req, res, next) => {
+router.post("/face-match", async (req: AuthRequest, res, next) => {
   try {
     const body = faceMatchSchema.parse(req.body);
-    const result = await faceMatch(body);
+    const result = await faceMatch(body, req.apiKey);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
