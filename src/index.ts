@@ -13,6 +13,7 @@ import healthRoutes from "./routes/health";
 import keysRoutes from "./routes/keys";
 import paymentRoutes from "./routes/payment";
 import analyticsRoutes from "./routes/analytics";
+import webhooksRoutes from "./routes/webhooks";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/health", healthRoutes);
 app.use("/v1/keys", keysRoutes);
 app.use("/v1/payment", paymentRoutes);
 app.use("/v1/analytics", analyticsRoutes);
+app.use("/v1/webhooks", webhooksRoutes);
 app.use("/v1/kyc", authMiddleware, analyticsMiddleware, kycRoutes);
 
 app.get("/", (_req, res) => {
