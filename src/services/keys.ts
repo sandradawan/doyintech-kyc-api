@@ -1,8 +1,3 @@
-/**
- * Simple in-memory API key store + usage tracking
- * In production → replace with PostgreSQL / Redis
- */
-
 export interface ApiKeyRecord {
   key: string;
   name: string;
@@ -50,6 +45,21 @@ export function getKeyInfo(apiKey: string) {
   return store.get(apiKey) || null;
 }
 
+export function listKeys() {
+  return Array.from(store.values()).map((r) => ({
+    id: r.key,
+    keyPreview: r.key.slice(0, 10) + "••••••••",
+    name: r.name,
+    plan: r.plan,
+    monthlyLimit: r.monthlyLimit,
+    usedThisMonth: r.usedThisMonth,
+    remaining: r.monthlyLimit - r.usedThisMonth,
+    active: r.active,
+    createdAt: r.createdAt,
+    lastUsedAt: r.lastUsedAt,
+  }));
+}
+
 export function createKey(name: string, plan: keyof typeof plans = "starter") {
   const key = `dt_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
   const record: ApiKeyRecord = {
@@ -63,6 +73,27 @@ export function createKey(name: string, plan: keyof typeof plans = "starter") {
   };
   store.set(key, record);
   return record;
+}
+
+export function revokeKey(keyId: string): boolean {
+  const record = store.get(keyId);
+  if (!record) return false;
+  record.active = false;
+  store.set(keyId, record);
+  return true;
+}
+
+export function activateKey(keyId: string): boolean {
+  const record = store.get(keyId);
+  if (!record) return false;
+  record.active = true;
+  store.set(keyId, record);
+  return true;
+}
+
+export function deleteKey(keyId: string): boolean {
+  if (keyId === "dev-key-123") return false;
+  return store.delete(keyId);
 }
 
 export { plans };
